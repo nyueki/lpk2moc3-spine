@@ -26,6 +26,7 @@ class Win(ctk.CTk, TkinterDnD.DnDWrapper):  # <-- Inherit from DnDWrapper
         self.outputPath = ctk.StringVar()
         self.configPath = ctk.StringVar()
         self.modelNameVar = ctk.StringVar(value="character")
+        self.extractionModeVar = ctk.StringVar(value="Live2D")  # Add extraction mode variable
         self.setupUI()
         manager.Log("Instructions\n"
                     "Models exported from Live2DViewerEX are in .wpk format\n"
@@ -47,6 +48,8 @@ class Win(ctk.CTk, TkinterDnD.DnDWrapper):  # <-- Inherit from DnDWrapper
         self.getConfig = ctk.CTkButton(self, text="Select JSON File", command=self.getConfigPath)
         self.lbl_modelName = ctk.CTkLabel(self, text="Model Name")
         self.modelName = ctk.CTkEntry(self, textvariable=self.modelNameVar, width=300)
+        self.lbl_mode = ctk.CTkLabel(self, text="Extraction Mode")
+        self.mode_selector = ctk.CTkComboBox(self, values=["Live2D", "Spine"], variable=self.extractionModeVar, width=120)
         self.getUnpack = ctk.CTkButton(self, text="Extract", command=self.Unpack, width=120)
         self.logArea = ctk.CTkTextbox(self, width=540, height=120)
         manager.LogArea = self.logArea
@@ -67,9 +70,13 @@ class Win(ctk.CTk, TkinterDnD.DnDWrapper):  # <-- Inherit from DnDWrapper
         self.lbl_modelName.grid(row=3, column=0, padx=padding, pady=(padding, 0), sticky="w")
         self.modelName.grid(row=3, column=1, padx=padding, pady=(padding, 0), sticky="ew")
 
+        # Extraction mode selector
+        self.lbl_mode.grid(row=6, column=0, padx=padding, pady=(padding, 0), sticky="w")
+        self.mode_selector.grid(row=6, column=1, padx=padding, pady=(padding, 0), sticky="w")
+
         self.logArea.grid(row=4, column=0, columnspan=3, padx=padding, pady=(padding, 0), sticky="ew")
 
-        self.getUnpack.grid(row=5, column=1, padx=padding, pady=(padding, padding))
+        self.getUnpack.grid(row=7, column=1, padx=padding, pady=(padding, padding))
 
         # --- Drag & Drop support ---
         self.input.drop_target_register(DND_FILES)
@@ -178,7 +185,6 @@ class Win(ctk.CTk, TkinterDnD.DnDWrapper):  # <-- Inherit from DnDWrapper
             )
             try:
                 loader = LpkLoader(self.input.get(), self.config.get())
-                # Pass the custom name to extract
                 loader.extract(self.output.get(), self.modelNameVar.get())
                 # Find the actual extracted folder name
                 extracted_folder = None
@@ -190,8 +196,11 @@ class Win(ctk.CTk, TkinterDnD.DnDWrapper):  # <-- Inherit from DnDWrapper
                 else:
                     extracted_folder = normalize(self.modelNameVar.get())
                 model_dir = os.path.join(self.outputPath.get(), normalize(self.modelNameVar.get()))
-                # Pass the custom name for renaming if needed
-                manager.SetupModel(model_dir, self.modelNameVar.get())
+                extraction_mode = self.extractionModeVar.get()
+                if extraction_mode == "Live2D":
+                    manager.SetupModel(model_dir, self.modelNameVar.get())
+                elif extraction_mode == "Spine":
+                    manager.SetupSpineModel(model_dir)
                 manager.Log("Extraction complete!")
                 messagebox.showinfo("LPK Model Extractor", "Extraction successful!")
             except Exception as e:

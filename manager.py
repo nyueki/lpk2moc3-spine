@@ -263,3 +263,51 @@ def SetupModel(model_dir: str, modelNameBase: str = None):
             rmdir(new_dir)
         os.rename(model_dir, new_dir)
         model_dir = new_dir  # Update model_dir to new location
+
+
+def SetupSpineModel(model_dir: str):
+    """
+    Renames spine files after extraction:
+    - skeleton_0 -> skeleton_0.skel
+    - atlases_0_atlas_0 -> skeleton_0.atlas.txt
+    - each texture in 'textures' -> corresponding name in 'tex_names' from model0.json
+    """
+    # Rename skeleton file
+    skeleton_path = os.path.join(model_dir, "skeleton_0")
+    if os.path.exists(skeleton_path):
+        new_skel_path = os.path.join(model_dir, "skeleton_0.skel")
+        os.rename(skeleton_path, new_skel_path)
+        Log(f"Renamed skeleton: skeleton_0 -> skeleton_0.skel")
+
+    # Rename atlas file
+    atlas_candidates = ["atlases_0_atlas_0", "skeleton_0.atlas", "skeleton_0.atlas.txt", "atlas"]
+    atlas_file = None
+    for fname in os.listdir(model_dir):
+        if fname in atlas_candidates:
+            atlas_file = fname
+            break
+    if atlas_file:
+        new_atlas_path = os.path.join(model_dir, "skeleton_0.atlas.txt")
+        os.rename(os.path.join(model_dir, atlas_file), new_atlas_path)
+        Log(f"Renamed atlas: {atlas_file} -> skeleton_0.atlas.txt")
+
+    # Rename texture files using 'tex_names' from model0.json
+    model_json_path = os.path.join(model_dir, "model0.json")
+    if os.path.exists(model_json_path):
+        with open(model_json_path, "r", encoding="utf-8") as f:
+            model_json = json.load(f)
+        atlas_entry = None
+        if "atlases" in model_json and isinstance(model_json["atlases"], list) and len(model_json["atlases"]) > 0:
+            atlas_entry = model_json["atlases"][0]
+        if atlas_entry and "tex_names" in atlas_entry and "textures" in atlas_entry:
+            tex_names = atlas_entry["tex_names"]
+            textures = atlas_entry["textures"]
+            for tex_name, texture_file in zip(tex_names, textures):
+                src_texture_path = os.path.join(model_dir, texture_file)
+                _, ext = os.path.splitext(texture_file)
+                if not ext:
+                    ext = ".png"
+                dst_texture_path = os.path.join(model_dir, tex_name + ext)
+                if os.path.exists(src_texture_path):
+                    os.rename(src_texture_path, dst_texture_path)
+                    Log(f"Renamed texture: {texture_file} -> {tex_name + ext}")
